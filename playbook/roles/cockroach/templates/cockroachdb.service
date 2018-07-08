@@ -1,0 +1,18 @@
+[Unit]
+Description=cockroachdb service
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/cockroach start \
+  --insecure \
+  --join={{ cockroachdb_seed }} \
+  --store=/var/lib/cockroach/ \
+  --host={{ ansible_eth0.ipv4.address }} \
+  --port=26257
+TimeoutStopSec=60
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

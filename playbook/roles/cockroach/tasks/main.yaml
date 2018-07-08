@@ -1,0 +1,55 @@
+# - name: cockroachdb service enable
+#   systemd:
+#     name: cockroachdb
+#     enabled: yes
+#     daemon_reload: yes
+#     state: stopped
+#   ignore_errors: True
+#   tags: recreate
+# - name: clear data
+#   file:
+#     state: absent
+#     path: "/var/lib/cockroach"
+#   tags: recreate
+
+- name: cockroach directory
+  file:
+    state: directory
+    path: "{{ item }}"
+  with_items:
+    - "/root/cockroach-archive/{{ cockroachdb_version }}/"
+    - "/var/lib/cockroach"
+- name: download cockroachdb
+  unarchive:
+    src: "https://binaries.cockroachdb.com/cockroach-v{{ cockroachdb_version }}.linux-amd64.tgz"
+    dest: "/root/cockroach-archive/{{ cockroachdb_version }}/"
+    remote_src: yes
+    extra_opts:
+      - --transform
+      - s/.*\///g
+- name: copy cockroachdb binary file
+  copy:
+    src: "/root/cockroach-archive/{{ cockroachdb_version }}/cockroach"
+    dest: "/usr/local/bin/"
+    remote_src: yes
+    mode: 0755
+
+- name: cockroachdb systemd config
+  template:
+    src: cockroachdb.service
+    dest: /etc/systemd/system/cockroachdb.service
+    mode: 0644
+  register: systemd_config
+  tags: service
+- name: cockroachdb systemctrl daemon reload
+  shell: systemctl daemon-reload
+  ignore_errors: yes
+  when: systemd_config.changed
+  tags: service
+- name: cockroachdb service enable
+  systemd:
+    name: cockroachdb
+    enabled: yes
+    daemon_reload: yes
+    state: started
+  tags: service
